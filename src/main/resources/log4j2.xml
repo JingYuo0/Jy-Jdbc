@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration status="error">
+    <!--properties-->
+    <properties>
+        <!-- 运行日志位置-->
+        <property name="LOG_HOME">logs</property>
+        <!-- info日志滚动仓库-->
+        <property name="LOG_REPO">logs/%d{yyyy-MM-dd}</property>
+        <!-- 错误日志滚动仓库-->
+        <property name="WARN_REPO">logs/error</property>
+        <!--日志格式-->
+        <property name="LOG_PATTERN">%d{yyyy-MM-dd 'at' HH:mm:ss z} %-5level %class{36} %L %M - %msg%xEx%n</property>
+        <!--文件过期时间-->
+        <property name="LOG_EXPIRE">15d</property>
+        <!--单文件大小-->
+        <property name="LOG_SIZE">100MB</property>
+    </properties>
+    <!--appenders -->
+    <appenders>
+        <!--控制台输出配置 -->
+        <Console name="Console" target="SYSTEM_OUT">
+            <!--控制台只输出level及以上级别的信息（onMatch），其他的直接拒绝（onMismatch） -->
+            <ThresholdFilter level="info" onMatch="ACCEPT" onMismatch="DENY"/>
+            <!--输出日志的格式 -->
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+        </Console>
+
+        <!--打印出所有的info信息，每小时滚动一次，单文件最大100M，文件最多保留15天 -->
+        <RollingFile name="InfoFile" fileName="${LOG_HOME}/server.log"
+                     filePattern="${LOG_REPO}/server.%d{yyyy-MM-dd-HH}.%i.log">
+            <Filters>
+                <ThresholdFilter level="warn" onMatch="DENY" onMismatch="NEUTRAL"/>
+                <ThresholdFilter level="info" onMatch="ACCEPT" onMismatch="DENY" />
+            </Filters>
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+            <Policies>
+                <!--每小时滚动一次，单文件最大100M-->
+                <TimeBasedTriggeringPolicy interval="1"/>
+                <SizeBasedTriggeringPolicy size="${LOG_SIZE}"/>
+            </Policies>
+            <DefaultRolloverStrategy max="10">
+                <!-- 每个文件最长保留时长=>15天-->
+                <Delete basePath="logs/" maxDepth="2">
+                    <IfFileName regex=".*log" />
+                    <IfLastModified age="${LOG_EXPIRE}" />
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingFile>
+
+        <!--打印出所有的warn/error信息，单文件最大100M后滚动，文件最多保留15天 -->
+        <RollingFile name="WarnFile" fileName="${LOG_HOME}/server_warn.log"
+                     filePattern="${WARN_REPO}/server_warn.%d{yyyy-MM-dd}.%i.log">
+            <Filters>
+                <ThresholdFilter level="warn" onMatch="ACCEPT" onMismatch="DENY"/>
+            </Filters>
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+            <Policies>
+                <!--单文件最大100M-->
+                <SizeBasedTriggeringPolicy size="${LOG_SIZE}"/>
+            </Policies>
+            <DefaultRolloverStrategy>
+                <!-- 每个文件最长保留时长=>15天-->
+                <Delete basePath="logs/" maxDepth="2">
+                    <IfFileName regex=".*log" />
+                    <IfLastModified age="${LOG_EXPIRE}" />
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingFile>
+
+    </appenders>
+
+    <!--然后定义logger，只有定义了logger并引入的appender，appender才会生效 -->
+    <loggers>
+        <!--运行日志-->
+        <logger name="com.jy" additivity="false" level="info">
+            <appenderRef ref="InfoFile"/>
+            <appenderRef ref="WarnFile"/>
+            <appenderRef ref="Console"/>
+        </logger>
+        <!--默认日志 -->
+        <root level="info">
+            <appender-ref ref="InfoFile"/>
+        </root>
+    </loggers>
+</configuration>
